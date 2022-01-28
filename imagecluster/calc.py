@@ -156,7 +156,8 @@ def pca(fingerprints, n_components=0.9, **kwds):
 
 
 def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
-            metric='euclidean', extra_out=False, print_stats=True, min_csize=2):
+            metric='euclidean', cut_criterion='distance',
+            extra_out=False, print_stats=True, min_csize=2, cut_kwds=None):
     """Hierarchical clustering of images based on image fingerprints,
     optionally scaled by time distance (`alpha`).
 
@@ -203,6 +204,10 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
     assert 0 <= sim <= 1, "sim not 0..1"
     assert 0 <= alpha <= 1, "alpha not 0..1"
     assert min_csize >= 1, "min_csize must be >= 1"
+
+    if cut_kwds is None:
+        cut_kwds = dict()
+
     files = list(fingerprints.keys())
     # array(list(...)): 2d array
     #   [[... fingerprint of image1 (4096,) ...],
@@ -230,7 +235,8 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
     # cut dendrogram, extract clusters
     # cut=[12,  3, 29, 14, 28, 27,...]: image i belongs to cluster cut[i]
-    cut = hierarchy.fcluster(Z, t=dfps.max()*(1.0-sim), criterion='distance')
+    cut_t = cut_kwds.get('t', default=dfps.max()*(1.0-sim))
+    cut = hierarchy.fcluster(Z, t=cut_t, criterion=cut_criterion, **cut_kwds)
     cluster_dct = dict((iclus, []) for iclus in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])

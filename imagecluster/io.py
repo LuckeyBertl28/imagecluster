@@ -135,7 +135,7 @@ def timestamp(filename, source='auto'):
 # (224, 224, 3)
 ##img = image.load_img(filename, target_size=size)
 ##... = image.img_to_array(img)
-def _image_worker(filename, size):
+def _image_worker(filename, size, verbose):
     # Handle PIL error "OSError: broken data stream when reading image file".
     # See https://github.com/python-pillow/Pillow/issues/1510 . We have this
     # issue with smartphone panorama JPG files. But instead of bluntly setting
@@ -146,10 +146,13 @@ def _image_worker(filename, size):
     # side would be good, but let's hope that an OSError doesn't cover too much
     # ground when reading data from disk :-)
     try:
-        print(filename)
+        if verbose:
+            print(filename)
+
         img = PIL.Image.open(filename).convert('RGB').resize(size, resample=3)
         arr = image.img_to_array(img, dtype=int)
         return filename, arr
+
     except OSError as ex:
         print(f"skipping {filename}: {ex}")
         return filename, None
@@ -163,7 +166,7 @@ def _timestamp_worker(filename, source):
         return filename, None
 
 
-def read_images(imagedir, size, ncores=mp.cpu_count()):
+def read_images(imagedir, size, verbose=False, ncores=mp.cpu_count()):
     """Load images from `imagedir` and resize to `size`.
 
     Parameters
@@ -171,6 +174,8 @@ def read_images(imagedir, size, ncores=mp.cpu_count()):
     imagedir : str
     size : sequence length 2
         (width, height), used in ``Image.open(filename).resize(size)``
+    verbose : bool
+        prints filenames when loading files
     ncores : int
         run that many parallel processes
 
@@ -179,10 +184,10 @@ def read_images(imagedir, size, ncores=mp.cpu_count()):
     dict
         {filename: 3d array (height, width, 3), ...}
     """
-    _f = functools.partial(_image_worker, size=size)
+    _f = functools.partial(_image_worker, size=size, verbose=verbose)
     with mp.Pool(ncores) as pool:
         ret = pool.map(_f, get_files(imagedir))
-    return {k: v for k,v in ret if v is not None}
+    return {k: v for k, v in ret if v is not None}
 
 
 def read_timestamps(imagedir, source='auto', ncores=mp.cpu_count()):
