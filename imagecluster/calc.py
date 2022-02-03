@@ -1,5 +1,6 @@
 import os
 from collections import OrderedDict
+from typing import Optional, Dict, Any
 
 import numpy as np
 from scipy.spatial import distance
@@ -155,9 +156,20 @@ def pca(fingerprints, n_components=0.9, **kwds):
     return {k:v for k,v in zip(_fingerprints.keys(), Xp)}
 
 
-def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
-            metric='euclidean', cut_criterion='distance',
-            extra_out=False, print_stats=True, min_csize=2, cut_kwds=None):
+def cluster(
+        fingerprints: Dict[str, np.ndarray],
+        sim: float = 0.5,
+        timestamps: Optional[dict] = None,
+        alpha: float = 0.3,
+        method: str = 'average',
+        metric: str = 'euclidean',
+        cut_criterion: str = 'distance',
+        extra_out: bool = False,
+        print_stats: bool = True,
+        min_csize: int = 2,
+        cut_kwds: Optional[Dict[str, Any]] = None,
+        optimal_ordering: bool = False
+):
     """Hierarchical clustering of images based on image fingerprints,
     optionally scaled by time distance (`alpha`).
 
@@ -176,11 +188,18 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
         pretty much the same result
     metric : see :func:`scipy.cluster.hierarchy.linkage`, make sure to use
         'euclidean' in case of method='centroid', 'median' or 'ward'
+    cut_criterion : see :func:`scipy.cluster.hierarchy.fcluster`
     extra_out : bool
         additionally return internal variables for debugging
     print_stats : bool
     min_csize : int
         return clusters with at least that many elements
+    cut_kwds : dict
+        additional keyword arguments for cutting, see :func:`scipy.cluster.hierarchy.fcluster`
+    optimal_ordering: bool
+        see :func:`scipy.cluster.hierarchy.linkage`, if True, the linkage matrix will be reordered so that the
+        distance between successive leaves is minimal, but it is slower
+
 
     Returns
     -------
@@ -231,21 +250,34 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
 
     # hierarchical/agglomerative clustering (Z = linkage matrix, construct
     # dendrogram), plot: scipy.cluster.hierarchy.dendrogram(Z)
-    Z = hierarchy.linkage(dfps, method=method, metric=metric)
+    Z = hierarchy.linkage(dfps, method=method, metric=metric, optimal_ordering=optimal_ordering)
+    R = hierarchy.inconsistent(Z)
 
     # cut dendrogram, extract clusters
     # cut=[12,  3, 29, 14, 28, 27,...]: image i belongs to cluster cut[i]
     if cut_kwds is None:
         cut_kwds = dict()
 
-    if 't' not in cut_kwds.keys():
-        cut_t = dfps.max() * (1.0 - sim)
+    cut_t = cut_kwds.get('ẗ́', dfps.max() * (1.0 - sim))
+    cut_depth = cut_kwds.get('depth', 2)
+    cut_monocrit = cut_kwds.get('monocrit', None)
 
-    else:
-        cut_t = cut_kwds['t']
-        del cut_kwds['t']
+    if (cut_monocrit is None) and (cut_criterion == 'monocrit'):
+        _mr = hierarchy.maxRstat(Z, R, 3)
+        cut_monocrit = _mr
 
-    cut = hierarchy.fcluster(Z, t=cut_t, criterion=cut_criterion, **cut_kwds)
+    elif (cut_monocrit is None) and (cut_criterion == 'maxclust_monocrit'):
+        _mi = hierarchy.maxinconsts(Z, R)
+        cut_monocrit = _mi
+
+    cut = hierarchy.fcluster(
+        Z,
+        t=cut_t,
+        criterion=cut_criterion,
+        depth=cut_depth,
+        R=R if (cut_criterion == 'inconsistent') else None,
+        monocrit=cut_monocrit
+    )
     cluster_dct = dict((iclus, []) for iclus in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])
