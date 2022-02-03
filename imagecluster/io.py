@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os
 import pickle
 import re
+from typing import Optional, Any, Dict
 
 from tensorflow.keras.preprocessing import image
 import PIL.Image
@@ -214,9 +215,13 @@ def read_timestamps(imagedir, source='auto', ncores=mp.cpu_count()):
 # TODO fingerprints and timestamps may have different images which have been
 # skipped -> we need a data struct to hold all image data and mask out the
 # skipped ones. For now we have a check in calc.cluster()
-def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
-                   img_kwds=dict(size=(224,224)), timestamps_kwds=dict(source='auto'),
-                   pca_kwds=None):
+def get_image_data(
+        imagedir: str,
+        model_kwds: Optional[Dict[str, Any]] = None,
+        img_kwds: Optional[Dict[str, Any]] = None,
+        timestamps_kwds: Optional[Dict[str, Any]] = None,
+        pca_kwds: Optional[Dict[str, Any]] = None
+):
     """Convenience function to create `images`, `fingerprints`,
     `timestamps`.
 
@@ -231,14 +236,15 @@ def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
     ----------
     imagedir : str
     model_kwds : dict
-        passed to :func:`~imagecluster.calc.get_model`
+        passed to :func:`~imagecluster.calc.get_model`, default ``{'layer': 'fc2'}``
     img_kwds : dict
-        passed to :func:`~imagecluster.io.read_images`
+        passed to :func:`~imagecluster.io.read_images`, default ``{'size': (224, 224)}``
     timestamps_kwds : dict
-        passed to :func:`~imagecluster.io.read_timestamps`
+        passed to :func:`~imagecluster.io.read_timestamps`, reading timestamps is skipped if
+        ``timestamps_kwds=None``, default ``None``
     pca_kwds : dict
         passed to :func:`~imagecluster.calc.pca`, PCA is skipped if
-        ``pca_kwds=None``
+        ``pca_kwds=None``, default ``None``
 
     Returns
     -------
@@ -246,6 +252,12 @@ def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
     fingerprints : see :func:`~imagecluster.calc.fingerprints`
     timestamps : see :func:`~imagecluster.io.read_timestamps`
     """
+    if model_kwds is None:
+        model_kwds = {'layer': 'fc2'}
+
+    if img_kwds is None:
+        img_kwds = {'size': (224, 224)}
+
     fingerprints_fn = pj(imagedir, ic_base_dir, 'fingerprints.pk')
     images_fn = pj(imagedir, ic_base_dir, 'images.pk')
     if os.path.exists(images_fn):
@@ -255,16 +267,22 @@ def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
         print(f"create image arrays {images_fn}")
         images = read_images(imagedir, **img_kwds)
         write_pk(images, images_fn)
+
     if os.path.exists(fingerprints_fn):
         print(f"reading fingerprints {fingerprints_fn} ...")
         fingerprints = read_pk(fingerprints_fn)
     else:
         print(f"create fingerprints {fingerprints_fn}")
         fingerprints = ic.fingerprints(images, ic.get_model(**model_kwds))
+
         if pca_kwds is not None:
             fingerprints = ic.pca(fingerprints, **pca_kwds)
+
         write_pk(fingerprints, fingerprints_fn)
-    print(f"reading timestamps ...")
+
+    timestamps = None
     if timestamps_kwds is not None:
+        print(f"reading timestamps ...")
         timestamps = read_timestamps(imagedir, **timestamps_kwds)
+
     return images, fingerprints, timestamps
