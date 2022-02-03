@@ -2,7 +2,11 @@
 *.egg-info
 *.swp
 *.bak*
-build/
 doc/build
 doc/source/generated
 doc/sphinx-autodoc
+build/
+install/
+imagecluster.egg-info/
+log/
+.idea

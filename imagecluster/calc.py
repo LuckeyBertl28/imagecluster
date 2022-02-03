@@ -205,10 +205,8 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
     assert 0 <= alpha <= 1, "alpha not 0..1"
     assert min_csize >= 1, "min_csize must be >= 1"
 
-    if cut_kwds is None:
-        cut_kwds = dict()
-
     files = list(fingerprints.keys())
+
     # array(list(...)): 2d array
     #   [[... fingerprint of image1 (4096,) ...],
     #    [... fingerprint of image2 (4096,) ...],
@@ -230,16 +228,28 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
         dts = dts / dts.max()
         dfps = dfps / dfps.max()
         dfps = dfps * (1 - alpha) + dts * alpha
+
     # hierarchical/agglomerative clustering (Z = linkage matrix, construct
     # dendrogram), plot: scipy.cluster.hierarchy.dendrogram(Z)
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
+
     # cut dendrogram, extract clusters
     # cut=[12,  3, 29, 14, 28, 27,...]: image i belongs to cluster cut[i]
-    cut_t = cut_kwds.get('t', dfps.max()*(1.0-sim))
+    if cut_kwds is None:
+        cut_kwds = dict()
+
+    if 't' not in cut_kwds.keys():
+        cut_t = dfps.max() * (1.0 - sim)
+
+    else:
+        cut_t = cut_kwds['t']
+        del cut_kwds['t']
+
     cut = hierarchy.fcluster(Z, t=cut_t, criterion=cut_criterion, **cut_kwds)
     cluster_dct = dict((iclus, []) for iclus in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])
+
     # group all clusters (cluster = list_of_files) of equal size together
     # {number_of_files1: [[list_of_files], [list_of_files],...],
     #  number_of_files2: [[list_of_files],...],
