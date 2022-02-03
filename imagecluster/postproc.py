@@ -3,7 +3,6 @@ import shutil
 from typing import Optional
 
 import matplotlib
-from matplotlib import pyplot as plt
 import numpy as np
 
 from . import calc as ic
@@ -41,6 +40,7 @@ def plot_clusters(
     maximized : bool
         show the figure in maximized window
     """
+    from matplotlib import pyplot as plt
     assert len(clusters) > 0, "`clusters` is empty"
 
     stats = ic.cluster_stats(clusters)
@@ -87,10 +87,12 @@ def plot_clusters(
     fig, ax = plt.subplots()
     ax.imshow(clusters_image)
     ax.axis('off')
+    ax.use_sticky_edges = False
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     fig_manager = plt.get_current_fig_manager()
-    fig_manager.full_screen_toggle()
+    if maximized:
+        fig_manager.full_screen_toggle()
 
     return fig, ax
 
@@ -99,6 +101,7 @@ def visualize(*args, **kwds):
     """Interactive wrapper of :func:`plot_clusters`. Just calls ``plt.show`` at
     the end. Doesn't return ``fig,ax``.
     """
+    from matplotlib import pyplot as plt
     plot_clusters(*args, **kwds)
     plt.show()
     plt.clf()
