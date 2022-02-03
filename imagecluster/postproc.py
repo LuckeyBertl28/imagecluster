@@ -46,8 +46,11 @@ def plot_clusters(
     # cluster_size (number of images per cluster)
     max_rows = stats[:, 0].max()
     n_rows = max_rows if (n_examples is None) else min(n_examples, max_rows)
+
+    # image shape
     shape = images[list(images.keys())[0]].shape[:2]
 
+    # memory check
     mem = n_rows * shape[0] * n_columns * shape[1] * 3
     if mem > mem_limit:
         raise Exception(
@@ -62,6 +65,9 @@ def plot_clusters(
         for cluster in clusters[cluster_size]:
             column_idx += 1
             for row_idx, filename in enumerate(cluster):
+                if row_idx >= n_rows:
+                    break
+
                 image = images[filename]
                 row_min = row_idx * shape[0]
                 row_max = (row_idx + 1) * shape[0]
