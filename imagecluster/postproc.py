@@ -1,11 +1,15 @@
 import os
 import shutil
-from typing import Dict, Sequence, Optional, Any
+from typing import Optional
 
+import matplotlib
 from matplotlib import pyplot as plt
 import numpy as np
 
 from . import calc as ic
+
+# configuration
+matplotlib.use('Qt5Agg')
 
 pj = os.path.join
 
@@ -15,7 +19,8 @@ def plot_clusters(
         images,
         max_csize: Optional[int] = None,
         mem_limit: int = 1024**3,
-        n_examples: Optional[int] = None
+        n_examples: Optional[int] = None,
+        maximized: bool = False
 ):
     """Plot `clusters` of images in `images`.
 
@@ -33,6 +38,8 @@ def plot_clusters(
         max(csize) and (iv) max_csize is large or None
     n_examples : int, optional
         show max n image examples from each cluster
+    maximized : bool
+        show the figure in maximized window
     """
     assert len(clusters) > 0, "`clusters` is empty"
 
@@ -60,26 +67,30 @@ def plot_clusters(
     # uint8 has range 0..255, perfect for images represented as integers, makes
     # rather big arrays possible
     clusters_image = np.ones((n_rows*shape[0], n_columns*shape[1], 3), dtype=np.uint8) * 255
+
     column_idx = -1
     for cluster_size in stats[:, 0]:
         for cluster in clusters[cluster_size]:
             column_idx += 1
             for row_idx, filename in enumerate(cluster):
-                if row_idx >= n_rows:
+                if row_idx > n_rows:
                     break
 
                 image = images[filename]
-                row_min = row_idx * shape[0]
-                row_max = (row_idx + 1) * shape[0]
-                column_min = column_idx * shape[1]
-                column_max = (column_idx + 1) * shape[1]
-                clusters_image[row_min:row_max, column_min:column_max, :] = image
+                y_min = row_idx * shape[0]
+                y_max = (row_idx + 1) * shape[0]
+                x_min = column_idx * shape[1]
+                x_max = (column_idx + 1) * shape[1]
+                clusters_image[y_min:y_max, x_min:x_max, :] = image
 
     print(f"plot array ({clusters_image.dtype}) size: {clusters_image.nbytes/1024**2} MiB")
     fig, ax = plt.subplots()
     ax.imshow(clusters_image)
     ax.axis('off')
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    fig_manager = plt.get_current_fig_manager()
+    fig_manager.full_screen_toggle()
 
     return fig, ax
 
@@ -90,6 +101,7 @@ def visualize(*args, **kwds):
     """
     plot_clusters(*args, **kwds)
     plt.show()
+    plt.clf()
 
 
 def make_links(clusters, cluster_dr):
