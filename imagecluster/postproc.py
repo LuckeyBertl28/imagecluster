@@ -73,7 +73,7 @@ def plot_clusters(
         for cluster in clusters[cluster_size]:
             column_idx += 1
             for row_idx, filename in enumerate(cluster):
-                if row_idx > n_rows:
+                if row_idx >= n_rows:
                     break
 
                 image = images[filename]
