@@ -1,9 +1,12 @@
 import os
+from pathlib import Path
 from setuptools import setup
 
-here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, "README.rst"), encoding="utf-8") as fd:
-    long_description = fd.read()
+setup_py_path = Path(__file__).resolve()
+here = setup_py_path.parent
+long_description = here.joinpath('README.rst').read_text(encoding='utf-8')
+
+requirements = here.joinpath('requirements.txt').read_text(encoding='utf-8').splitlines()
 
 package_name = 'imagecluster'
 
@@ -19,7 +22,7 @@ setup(
     license="BSD 3-Clause",
     keywords="image cluster vgg16 deep-learning",
     packages=[package_name],
-    install_requires=['setuptools'] + open("requirements.txt").read().splitlines(),
+    install_requires=['setuptools'] + requirements,
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
