@@ -48,9 +48,7 @@
     <exec_depend>python3-pil</exec_depend>
     <exec_depend>python3-sklearn</exec_depend>
     <exec_depend>python3-matplotlib</exec_depend>
-    <exec_depend>python3-matplotlib</exec_depend>
     <exec_depend>python-tensorflow-pip</exec_depend>
-    <exec_depend>python-tensorflow-gpu-pip</exec_depend>
     <exec_depend>python-tensorflow-hub-pip</exec_depend>
     <exec_depend>piexif</exec_depend>
 
